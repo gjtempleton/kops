@@ -384,3 +384,224 @@ func Test_Validate_Calico(t *testing.T) {
 		testErrors(t, g.Input, errs, g.ExpectedErrors)
 	}
 }
+<<<<<<< HEAD
+=======
+
+func Test_Validate_RollingUpdate(t *testing.T) {
+	grid := []struct {
+		Input          kops.RollingUpdate
+		OnMasterIG     bool
+		ExpectedErrors []string
+	}{
+		{
+			Input: kops.RollingUpdate{},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxUnavailable: intStr(intstr.FromInt(0)),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxUnavailable: intStr(intstr.FromString("0%")),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxUnavailable: intStr(intstr.FromString("nope")),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxUnavailable"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxUnavailable: intStr(intstr.FromInt(-1)),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxUnavailable"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxUnavailable: intStr(intstr.FromString("-1%")),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxUnavailable"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(0)),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("0%")),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(1)),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("1%")),
+			},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("nope")),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(-1)),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("-1%")),
+			},
+			ExpectedErrors: []string{"Invalid value::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(0)),
+			},
+			OnMasterIG: true,
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("0%")),
+			},
+			OnMasterIG: true,
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(1)),
+			},
+			OnMasterIG:     true,
+			ExpectedErrors: []string{"Forbidden::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("1%")),
+			},
+			OnMasterIG:     true,
+			ExpectedErrors: []string{"Forbidden::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("nope")),
+			},
+			OnMasterIG:     true,
+			ExpectedErrors: []string{"Invalid value::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromInt(-1)),
+			},
+			OnMasterIG:     true,
+			ExpectedErrors: []string{"Forbidden::testField.maxSurge"},
+		},
+		{
+			Input: kops.RollingUpdate{
+				MaxSurge: intStr(intstr.FromString("-1%")),
+			},
+			OnMasterIG:     true,
+			ExpectedErrors: []string{"Forbidden::testField.maxSurge"},
+		},
+	}
+	for _, g := range grid {
+		errs := validateRollingUpdate(&g.Input, field.NewPath("testField"), g.OnMasterIG)
+		testErrors(t, g.Input, errs, g.ExpectedErrors)
+	}
+}
+
+func intStr(i intstr.IntOrString) *intstr.IntOrString {
+	return &i
+}
+
+func Test_Validate_NodeLocalDNS(t *testing.T) {
+	grid := []struct {
+		Input          kops.ClusterSpec
+		ExpectedErrors []string
+	}{
+		{
+			Input: kops.ClusterSpec{
+				KubeProxy: &kops.KubeProxyConfig{
+					ProxyMode: "iptables",
+				},
+				KubeDNS: &kops.KubeDNSConfig{
+					Provider: "CoreDNS",
+					NodeLocalDNS: &kops.NodeLocalDNSConfig{
+						Enabled: true,
+					},
+				},
+			},
+			ExpectedErrors: []string{},
+		},
+		{
+			Input: kops.ClusterSpec{
+				Kubelet: &kops.KubeletConfigSpec{
+					ClusterDNS: "100.64.0.10",
+				},
+				KubeProxy: &kops.KubeProxyConfig{
+					ProxyMode: "ipvs",
+				},
+				KubeDNS: &kops.KubeDNSConfig{
+					Provider: "CoreDNS",
+					NodeLocalDNS: &kops.NodeLocalDNSConfig{
+						Enabled: true,
+					},
+				},
+			},
+			ExpectedErrors: []string{"Forbidden::spec.kubelet.clusterDNS"},
+		},
+		{
+			Input: kops.ClusterSpec{
+				Kubelet: &kops.KubeletConfigSpec{
+					ClusterDNS: "100.64.0.10",
+				},
+				KubeProxy: &kops.KubeProxyConfig{
+					ProxyMode: "ipvs",
+				},
+				KubeDNS: &kops.KubeDNSConfig{
+					Provider: "CoreDNS",
+					NodeLocalDNS: &kops.NodeLocalDNSConfig{
+						Enabled: true,
+					},
+				},
+				Networking: &kops.NetworkingSpec{
+					Cilium: &kops.CiliumNetworkingSpec{},
+				},
+			},
+			ExpectedErrors: []string{"Forbidden::spec.kubelet.clusterDNS"},
+		},
+		{
+			Input: kops.ClusterSpec{
+				Kubelet: &kops.KubeletConfigSpec{
+					ClusterDNS: "169.254.20.10",
+				},
+				KubeProxy: &kops.KubeProxyConfig{
+					ProxyMode: "iptables",
+				},
+				KubeDNS: &kops.KubeDNSConfig{
+					Provider: "CoreDNS",
+					NodeLocalDNS: &kops.NodeLocalDNSConfig{
+						Enabled: true,
+						LocalIP: "169.254.20.10",
+					},
+				},
+				Networking: &kops.NetworkingSpec{
+					Cilium: &kops.CiliumNetworkingSpec{},
+				},
+			},
+			ExpectedErrors: []string{},
+		},
+	}
+
+	for _, g := range grid {
+		errs := validateNodeLocalDNS(&g.Input, field.NewPath("spec"))
+		testErrors(t, g.Input, errs, g.ExpectedErrors)
+	}
+}
+>>>>>>> b947603cb... Add unit tests
