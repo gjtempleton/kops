@@ -305,8 +305,13 @@ func ValidateCluster(c *kops.Cluster, strict bool) *field.Error {
 				if c.Spec.Kubelet != nil && c.Spec.Kubelet.ClusterDNS != c.Spec.KubeDNS.ServerIP {
 					return field.Invalid(fieldSpec.Child("kubeDNS", "serverIP"), address, "Kubelet ClusterDNS did not match cluster kubeDNS.serverIP")
 				}
-				if c.Spec.MasterKubelet != nil && c.Spec.MasterKubelet.ClusterDNS != c.Spec.KubeDNS.ServerIP {
-					return field.Invalid(fieldSpec.Child("kubeDNS", "serverIP"), address, "MasterKubelet ClusterDNS did not match cluster kubeDNS.serverIP")
+				if !featureflag.ExperimentalClusterDNS.Enabled() {
+					if isExperimentalClusterDNS(c.Spec.Kubelet, c.Spec.KubeDNS) {
+						allErrs = append(allErrs, field.Forbidden(fieldSpec.Child("kubelet", "clusterDNS"), "Kubelet ClusterDNS did not match cluster kubeDNS.serverIP or nodeLocalDNS.localIP"))
+					}
+					if isExperimentalClusterDNS(c.Spec.MasterKubelet, c.Spec.KubeDNS) {
+						allErrs = append(allErrs, field.Forbidden(fieldSpec.Child("masterKubelet", "clusterDNS"), "MasterKubelet ClusterDNS did not match cluster kubeDNS.serverIP or nodeLocalDNS.localIP"))
+					}
 				}
 			}
 
@@ -833,4 +838,50 @@ func DeepValidate(c *kops.Cluster, groups []*kops.InstanceGroup, strict bool) er
 	}
 
 	return nil
+}
+
+func validateKubelet(k *kops.KubeletConfigSpec, c *kops.Cluster, kubeletPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if k != nil {
+
+		{
+			// Flag removed in 1.6
+			if k.APIServers != "" {
+				allErrs = append(allErrs, field.Forbidden(
+					kubeletPath.Child("apiServers"),
+					"api-servers flag was removed in 1.6"))
+			}
+		}
+
+		if c.IsKubernetesGTE("1.10") {
+			// Flag removed in 1.10
+			if k.RequireKubeconfig != nil {
+				allErrs = append(allErrs, field.Forbidden(
+					kubeletPath.Child("requireKubeconfig"),
+					"require-kubeconfig flag was removed in 1.10.  (Please be sure you are not using a cluster config from `kops get cluster --full`)"))
+			}
+		}
+
+		if k.BootstrapKubeconfig != "" {
+			if c.Spec.KubeAPIServer == nil {
+				allErrs = append(allErrs, field.Required(kubeletPath.Root().Child("spec").Child("kubeAPIServer"), "bootstrap token require the NodeRestriction admissions controller"))
+			}
+		}
+
+		if k.TopologyManagerPolicy != "" {
+			allErrs = append(allErrs, IsValidValue(kubeletPath.Child("topologyManagerPolicy"), &k.TopologyManagerPolicy, []string{"none", "best-effort", "restricted", "single-numa-node"})...)
+			if !c.IsKubernetesGTE("1.18") {
+				allErrs = append(allErrs, field.Forbidden(kubeletPath.Child("topologyManagerPolicy"), "topologyManagerPolicy requires at least Kubernetes 1.18"))
+			}
+		}
+
+	}
+	return allErrs
+}
+
+func isExperimentalClusterDNS(k *kops.KubeletConfigSpec, dns *kops.KubeDNSConfig) bool {
+
+	return k != nil && k.ClusterDNS != dns.ServerIP && dns.NodeLocalDNS != nil && k.ClusterDNS != dns.NodeLocalDNS.LocalIP
+
 }

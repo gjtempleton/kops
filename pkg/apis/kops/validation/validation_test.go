@@ -19,6 +19,7 @@ package validation
 import (
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -384,8 +385,6 @@ func Test_Validate_Calico(t *testing.T) {
 		testErrors(t, g.Input, errs, g.ExpectedErrors)
 	}
 }
-<<<<<<< HEAD
-=======
 
 func Test_Validate_RollingUpdate(t *testing.T) {
 	grid := []struct {
@@ -604,4 +603,3 @@ func Test_Validate_NodeLocalDNS(t *testing.T) {
 		testErrors(t, g.Input, errs, g.ExpectedErrors)
 	}
 }
->>>>>>> b947603cb... Add unit tests
