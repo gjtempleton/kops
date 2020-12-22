@@ -6,7 +6,7 @@
 
 # kOps - Kubernetes Operations
 
-[GoDoc]: https://pkg.go.dev/k8s.io/kOps
+[GoDoc]: https://pkg.go.dev/k8s.io/kops
 [GoDoc Widget]: https://godoc.org/k8s.io/kOps?status.svg
 
 The easiest way to get a production grade Kubernetes cluster up and running.
